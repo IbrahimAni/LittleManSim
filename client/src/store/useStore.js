@@ -1,12 +1,13 @@
 import { create } from "zustand";
 import LMC from "../utils/lmcSimulator";
+import { toast } from "react-toastify";
 
 const useStore = create((set, get) => ({
   lmc: new LMC(), // Create a new instance of the LMC simulator
   program: [], // The program to be loaded into the LMC
   accumulator: 0, // The accumulator register value
   programCounter: 0, // The program counter value
-  mailboxes: Array(100).fill(0), // The mailbox values
+  mailboxes: Array(100).fill("000"), // The mailbox values
   halted: false, // Whether the LMC is in a halted state
   error: null, // Error message if an error occurs
   outputs: [], // Initialize with an empty array
@@ -14,8 +15,11 @@ const useStore = create((set, get) => ({
   code: "", // The code editor value
   currentInstructionId: null, // The currently selected instruction ID
   logs: [], // Array to store logs
+  highlightedIndexes: [],
 
   //Actions
+
+  setHighlightedIndexes: (indices) => set({ highlightedIndexes: indices }),
 
   /**
    * Sets the Accumulator Equation.
@@ -82,6 +86,7 @@ const useStore = create((set, get) => ({
       }
     } catch (error) {
       set({ error: error.message });
+      toast.error(error.message);
     }
   },
 
@@ -111,8 +116,11 @@ const useStore = create((set, get) => ({
       if (currentEquation) {
         set({ accumulatorEquation: currentEquation });
       }
+
+      toast.success("Program execution completed successfully.");
     } catch (error) {
       set({ error: error.message });
+      toast.error(error.message);
     }
   },
 
@@ -122,22 +130,15 @@ const useStore = create((set, get) => ({
   stopExecution: () => {
     const lmcInstance = get().lmc;
     try {
-      lmcInstance.stop(); // Assuming the LMC simulator has a stop method
+      lmcInstance.halted = true;
       set({
         halted: lmcInstance.halted,
         error: null,
       });
-      toast.info("Program execution stopped.", {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-      });
+      toast.info("Program execution stopped.");
     } catch (error) {
       set({ error: error.message });
+      toast.error(error.message);
     }
   },
 
@@ -151,13 +152,14 @@ const useStore = create((set, get) => ({
     set({
       accumulator: lmcInstance.accumulator,
       programCounter: lmcInstance.programCounter,
-      mailboxes: [...lmcInstance.memory],
+      mailboxes: Array(100).fill("000"),
       halted: lmcInstance.halted,
       error: null,
       outputs: [],
       accumulatorEquation: "", // Reset the equation on reset
       logs: lmcInstance.getLogs(),
-    });
+    });    
+    toast.info("Program reset successfully!");
   },
 
   /**
@@ -178,7 +180,7 @@ const useStore = create((set, get) => ({
     const lmcInstance = get().lmc;
     return lmcInstance.getOutput();
   },
-  
+
   /**
    * Clears all logs.
    */

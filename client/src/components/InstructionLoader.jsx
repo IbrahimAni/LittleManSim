@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Label,
   Listbox,
@@ -17,6 +17,9 @@ const InstructionLoader = () => {
   const setCurrentInstructionId = useStore(
     (state) => state.setCurrentInstructionId
   );
+
+  // State to track the selected instruction
+  const [selectedInstruction, setSelectedInstruction] = useState(null);
 
   // Helper function to format instructions for display
   const formatInstructions = (instructions) => {
@@ -51,7 +54,9 @@ const InstructionLoader = () => {
 
       // Prevent duplicate loading
       if (currentInstructionId === selectedGroup.id) {
-        toast.warn("This instruction selected is already loaded into the editor.");
+        toast.warn(
+          "This instruction selected is already loaded into the editor."
+        );
         return;
       }
 
@@ -59,6 +64,9 @@ const InstructionLoader = () => {
       setCode(newProgram);
       toast.success("Instruction group loaded successfully!");
       setCurrentInstructionId(selectedGroup.id);
+
+      // Set the selected instruction in the state
+      setSelectedInstruction(selectedGroup);
     }
   };
 
@@ -67,7 +75,7 @@ const InstructionLoader = () => {
       className="w-full max-w-2xl p-4 bg-gray-100 rounded-md shadow-md mt-4 relative z-50"
       data-testid="instruction-loader-container"
     >
-      <Listbox onChange={handleSelection}>
+      <Listbox onChange={handleSelection} value={selectedInstruction}>
         {({ open }) => (
           <>
             <Label
@@ -84,7 +92,9 @@ const InstructionLoader = () => {
                 aria-expanded={open}
               >
                 <span className="block truncate font-mono">
-                  --Select an instruction--
+                  {selectedInstruction
+                    ? selectedInstruction.name // Show selected instruction's name
+                    : "--Select an instruction--"}
                 </span>
                 <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                   <ChevronUpDownIcon

@@ -1,71 +1,166 @@
 import React, { useState } from "react";
 import useStore from "../../store/useStore";
 import Editor from "@monaco-editor/react";
+import { toast } from "react-toastify";
 
 const CodeEditor = () => {
   const code = useStore((state) => state.code);
   const setCode = useStore((state) => state.setCode);
   const loadProgram = useStore((state) => state.loadProgram);
-  const clearProgram = useStore((state) => state.clearProgram);
   const run = useStore((state) => state.run);
   const step = useStore((state) => state.step);
   const stop = useStore((state) => state.stopExecution);
+  const reset = useStore((state) => state.reset);
+  const setHighlightedIndexes = useStore(
+    (state) => state.setHighlightedIndexes
+  );
 
+  // Define mnemonic to opcode mapping
+  const mnemonicMap = {
+    ADD: 100,
+    SUB: 200,
+    STA: 300,
+    LDA: 500,
+    BRA: 600,
+    BRZ: 700,
+    BRP: 800,
+    INP: 901,
+    OUT: 902,
+    HLT: 0,
+  };
+
+  // Handle changes in the editor
   const handleEditorChange = (value) => {
     setCode(value.toUpperCase());
   };
 
   const parseProgram = (code) => {
     const lines = code.split("\n");
-    const program = lines.map((line) => {
-      const trimmed = line.trim();
+    const program = [];
+    const labelMap = {};
 
-      // Ignore empty lines and comments
-      if (trimmed === "" || trimmed.startsWith("//")) return 0;
+    // First pass: Handle labels and build label map
+    lines.forEach((line, index) => {
+      const trimmed = line.replace(/\|/g, "").trim(); // Remove pipes and trim
+      if (trimmed === "" || trimmed.startsWith("//")) return; // Skip empty lines and comments
 
-      // Split the line into parts
       const parts = trimmed.split(/\s+/); // Split by whitespace
-
-      // Assume format: [label:] mnemonic address
-      let mnemonic, address;
+      let label = "";
+      let mnemonic = "";
+      let address = "";
 
       if (parts.length === 3) {
         // Line with label
-        mnemonic = parts[1];
+        label = parts[0];
+        mnemonic = parts[1].toUpperCase();
         address = parts[2];
+        labelMap[label] = program.length;
       } else if (parts.length === 2) {
-        // Line without label
-        mnemonic = parts[0];
-        address = parts[1];
+        const possibleMnemonic = parts[0].toUpperCase();
+        if (mnemonicMap.hasOwnProperty(possibleMnemonic)) {
+          // Line with mnemonic and address (no label)
+          mnemonic = possibleMnemonic;
+          address = parts[1];
+        } else {
+          // Line with label and mnemonic (no address)
+          label = parts[0];
+          mnemonic = parts[1].toUpperCase();
+          labelMap[label] = program.length;
+        }
       } else if (parts.length === 1) {
         // Only mnemonic (e.g., HLT)
         mnemonic = parts[0];
-        address = "";
       } else {
-        // Invalid format
-        return 0;
+        toast.error(`Invalid instruction format on line ${index + 1}`);
       }
 
-      // Here you can map mnemonics to their corresponding numeric codes
-      // For simplicity, we'll return 0 for non-numeric lines
-      // Implement your actual parsing logic as needed
-      return 0;
+      program.push({ label, mnemonic, address, originalLine: index + 1 });
     });
-    return program;
+
+    // Initialize all mailboxes to '000'
+    const numericProgram = Array(100).fill("000");
+    const opcodeIndices = [];
+
+    // Second pass: Convert mnemonics and resolve labels
+    program.forEach((instr, idx) => {
+      const { mnemonic, address, originalLine } = instr;
+
+      if (mnemonic === "DAT") {
+        if (!address) {
+          // DAT without address, keep '000', no change needed
+          return;
+        }
+
+        if (/^\d+$/.test(address)) {
+          // DAT with numeric address
+          numericProgram[idx] = String(address).padStart(3, "0");
+          opcodeIndices.push(idx);
+        } else {
+          toast.error(`Invalid DAT value "${address}" on line ${originalLine}`);
+          numericProgram[idx] = "000"; // Default to '000' on error
+        }
+        // No highlighting for DAT
+        return;
+      }
+
+      const opcode = mnemonicMap[mnemonic];
+
+      if (opcode === undefined) {
+        toast.error(`Unknown mnemonic "${mnemonic}" on line ${originalLine}`);
+        numericProgram[idx] = "000"; // Default to '000' on error
+        return;
+      }
+
+      let operand = 0;
+      if (address) {
+        if (/^\d+$/.test(address)) {
+          operand = parseInt(address, 10);
+        } else {
+          // Operand is a label
+          const labelAddress = labelMap[address];
+          if (labelAddress === undefined) {
+            toast.error(`Undefined label "${address}" on line ${originalLine}`);
+            operand = 0;
+          } else {
+            operand = labelAddress;
+          }
+        }
+      }
+
+      const numericValue = opcode + operand;
+      numericProgram[idx] = String(numericValue).padStart(3, "0");
+
+      // Only add to opcodeIndices if the numeric value is not '000'
+      if (mnemonic === "HLT" || numericProgram[idx] !== "000") {
+        opcodeIndices.push(idx);
+      }
+    });
+
+    return { numericProgram, opcodeIndices };
   };
 
+  /**
+   * Handles loading the program into RAM.
+   */
   const handleLoadProgram = () => {
-    const program = parseProgram(code);
-    loadProgram(program);
+    if(!code) {
+      toast.error("No instruction to load!");
+      return
+    }
+    const { numericProgram, opcodeIndices } = parseProgram(code);
+    loadProgram(numericProgram);
+    setHighlightedIndexes(opcodeIndices);
+    toast.success("Instruction loaded successfully!");
   };
 
   const handleClearClick = () => {
     setCode("");
-    clearProgram(); // Clear the program from the store
+    toast.info("Instruction cleared successfully!");
   };
 
   const handleRun = () => {
     run();
+    toast.info("Running program...");
   };
 
   const handleStep = () => {
@@ -74,6 +169,12 @@ const CodeEditor = () => {
 
   const handleStop = () => {
     stop();
+  };
+
+  const handleReset = () => {
+    reset();
+    setCode("");
+    setHighlightedIndexes([]);
   };
 
   return (
@@ -131,15 +232,16 @@ const CodeEditor = () => {
           data-testid="button-divider"
         ></div>
 
-        {/* Load Button */}
+        {/* Reset Button */}
         <button
           className="flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-1 px-3 rounded text-xs"
-          data-testid="load-button"
-          aria-label="Load Program"
-          onClick={handleLoadProgram}
+          data-testid="reset-button"
+          aria-label="Reset Program"
+          onClick={handleReset}
         >
-          <i className="bx bx-upload mr-1" aria-hidden="true"></i>
-          Load
+          <i className="bx bx-refresh mr-1" aria-hidden="true"></i>{" "}
+          {/* Updated icon to reflect reset */}
+          Reset
         </button>
       </div>
 
@@ -169,20 +271,36 @@ const CodeEditor = () => {
           rulers: [],
           overviewRulerLanes: 0,
           folding: false,
-          
+          scrollBeyondLastColumn: 0,
         }}
       />
 
-      {/* Clear Button */}
-      <button
-        className="flex items-center bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded text-xs mt-4"
-        data-testid="clear-button"
-        aria-label="Clear Program"
-        onClick={handleClearClick}
+      <div
+        className="flex items-center space-x-2 mt-4"
+        data-testid="left-button-group"
       >
-        <i className="bx bx-trash mr-1" aria-hidden="true"></i>
-        Clear
-      </button>
+        {/* Load Button */}
+        <button
+          className="flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-1 px-3 rounded text-xs"
+          data-testid="load-button"
+          aria-label="Load Program"
+          onClick={handleLoadProgram}
+        >
+          <i className="bx bx-upload mr-1" aria-hidden="true"></i>
+          Load
+        </button>
+
+        {/* Clear Button */}
+        <button
+          className="flex items-center bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded text-xs"
+          data-testid="clear-button"
+          aria-label="Clear Program"
+          onClick={handleClearClick}
+        >
+          <i className="bx bx-trash mr-1" aria-hidden="true"></i>
+          Clear
+        </button>
+      </div>
     </div>
   );
 };
