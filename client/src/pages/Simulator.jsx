@@ -70,7 +70,7 @@ const Simulator = () => {
         <div className="grid grid-cols-1 gap-4 lg:col-span-2 mt-4 h-full">
           <section aria-labelledby="section-log-info-title">
             <div className="overflow-hidden rounded-lg bg-white shadow">
-              <div className="p-6 pt-1 h-full flex flex-col">
+              <div className="container mx-auto p-6 ">
                 <LogInfo />
               </div>
             </div>

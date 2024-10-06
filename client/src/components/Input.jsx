@@ -76,7 +76,7 @@ const Input = () => {
       {/* Submit Button */}
       <button
         type="submit"
-        className="bg-[#F97316] hover:bg-[#D97316] text-white font-mono text-sm py-2 px-4 rounded-full shadow-sm transition duration-200 ease-in-out flex items-center justify-center"
+        className="bg-[#F97316] hover:bg-[#D97316] text-white font-mono text-sm py-2 px-4 rounded shadow-sm transition duration-200 ease-in-out flex items-center justify-center"
         data-testid="submit-button"
         aria-label="Submit input value"
       >

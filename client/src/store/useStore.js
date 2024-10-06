@@ -2,51 +2,60 @@ import { create } from "zustand";
 import LMC from "../utils/lmcSimulator";
 import { toast } from "react-toastify";
 
+const lmc = new LMC();
+
 const useStore = create((set, get) => ({
-  lmc: new LMC(), // Create a new instance of the LMC simulator
+  lmc: lmc, // Create a new instance of the LMC simulator
   program: [], // The program to be loaded into the LMC
-  accumulator: 0, // The accumulator register value
-  programCounter: 0, // The program counter value
-  mailboxes: Array(100).fill("000"), // The mailbox values
-  halted: false, // Whether the LMC is in a halted state
+  accumulator: lmc.getAccumulator(), // The accumulator register value
+  programCounter: lmc.getProgramCounter(), // The program counter value
+  mailboxes: lmc.getMemory(),
+  halted: lmc.getHaltedSatate(), // Whether the LMC is in a halted state
   error: null, // Error message if an error occurs
-  outputs: [], // Initialize with an empty array
-  accumulatorEquation: "", // Equation to display in the accumulator
+  outputs: lmc.getOutputs(), // Initialize with an empty array
+  // accumulatorEquation: "", // Equation to display in the accumulator
   code: "", // The code editor value
   currentInstructionId: null, // The currently selected instruction ID
-  logs: [], // Array to store logs
+  logs: lmc.getDocumentations(), // Array to store logs
   highlightedIndexes: [],
+  programIndices: lmc.getProgramIndices(),
 
   //Actions
 
   setHighlightedIndexes: (indices) => set({ highlightedIndexes: indices }),
 
-  /**
-   * Sets the Accumulator Equation.
-   * @param {string} equation - The equation to display.
-   */
-  setAccumulatorEquation: (equation) => set({ accumulatorEquation: equation }),
+  // /**
+  //  * Sets the Accumulator Equation.
+  //  * @param {string} equation - The equation to display.
+  //  */
+  // setAccumulatorEquation: (equation) => set({ accumulatorEquation: equation }),
 
   /**
    * Loads a program into the LMC simulator.
-   * @param {Array} program - The program instructions.
+   * @param {Array} instruction - The program instructions.
    */
-  loadProgram: (program) => {
-    const lmcInstance = get().lmc;
-    lmcInstance.loadProgram(program);
-    lmcInstance.clearLogs(); // Clear logs when loading a new program
+  loadLmcProgram: (instructions) => {
+    const lmcInstance = get().lmc;    
+
+    // convert the instructions to a lmc program(opcodes)
+    const programs = lmcInstance.convertToProgram(instructions);
+    
+    lmcInstance.loadProgram(programs, instructions);  // Load the new program (logs are generated here)
+  
     set({
-      program,
-      accumulator: lmcInstance.accumulator,
-      programCounter: lmcInstance.programCounter,
-      mailboxes: [...lmcInstance.memory],
+      program: programs,
+      accumulator: lmcInstance.getAccumulator(),
+      programCounter: lmcInstance.getProgramCounter(),
+      mailboxes: lmcInstance.getMemory(),
       halted: lmcInstance.halted,
       error: null,
-      outputs: [],
-      accumulatorEquation: "",
-      logs: lmcInstance.getLogs(),
+      outputs: lmcInstance.getOutputs(),
+      programIndices: lmcInstance.getProgramIndices(),
+      logs: lmcInstance.getDocumentations(),
     });
   },
+  
+  
 
   /**
    * Sets the code in the editor directly.
