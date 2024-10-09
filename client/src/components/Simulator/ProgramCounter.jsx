@@ -8,13 +8,10 @@ import 'react-circular-progressbar/dist/styles.css';
 
 const ProgramCounter = () => {
   // Access the Program Counter value from Zustand store
-  const programCounter = useStore((state) => state.programCounter);
-
-  // Define maximum value (assuming LMC has 100 mailboxes: 0-99)
-  const maxCounter = 9;
+  const {totalProgramCounter, programCounter} = useStore();
 
   // Calculate percentage
-  const percentage = (programCounter / maxCounter) * 100;
+  const percentage = (programCounter / totalProgramCounter) * 100;
 
   return (
     <div

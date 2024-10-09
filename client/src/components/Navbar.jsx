@@ -52,7 +52,7 @@ const Navbar = () => {
           </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
             {/* Profile dropdown */}
-            <Menu as="div" className="relative ml-3">
+            {/* <Menu as="div" className="relative ml-3">
               <div>
                 <MenuButton className="relative flex rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                   <span className="absolute -inset-1.5" />
@@ -93,7 +93,7 @@ const Navbar = () => {
                   </a>
                 </MenuItem>
               </MenuItems>
-            </Menu>
+            </Menu> */}
           </div>
           <div className="-mr-2 flex items-center sm:hidden">
             {/* Mobile menu button */}
@@ -139,7 +139,7 @@ const Navbar = () => {
             Documentation
           </DisclosureButton>
         </div>
-        <div className="border-t border-gray-200 pb-3 pt-4">
+        {/* <div className="border-t border-gray-200 pb-3 pt-4">
           <div className="flex items-center px-4">
             <div className="flex-shrink-0">
               <img
@@ -180,7 +180,7 @@ const Navbar = () => {
               Sign out
             </DisclosureButton>
           </div>
-        </div>
+        </div> */}
       </DisclosurePanel>
     </Disclosure>
   );

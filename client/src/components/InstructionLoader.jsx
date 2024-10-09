@@ -12,11 +12,7 @@ import useStore from "../store/useStore";
 import { toast } from "react-toastify";
 
 const InstructionLoader = () => {
-  const setCode = useStore((state) => state.setCode);
-  const currentInstructionId = useStore((state) => state.currentInstructionId);
-  const setCurrentInstructionId = useStore(
-    (state) => state.setCurrentInstructionId
-  );
+  const { setCode, currentInstructionId, setCurrentInstructionId } = useStore();
 
   // State to track the selected instruction
   const [selectedInstruction, setSelectedInstruction] = useState(null);

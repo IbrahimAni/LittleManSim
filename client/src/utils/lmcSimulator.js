@@ -21,6 +21,35 @@ class LMC {
     this.error = null;
     this.inputCallback = null;
     this.programIndices = [];
+    this.totalProgramCounter = 0;
+    this.delayTime = 1000;
+    this.onStep = null;
+  }
+
+  /**
+   * Sets the callback function to be used after each step.
+   *
+   * @param {Function} callback - The function to be called after each step.
+   */
+  setOnStepCallback(callback) {
+    this.onStep = callback;
+  }
+
+  delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  getError() {
+    return this.error;
+  }
+
+  /**
+   * Retrieves the total program counter.
+   *
+   * @returns {number} The value of the total program counter.
+   */
+  getTotalProgramCounter() {
+    return this.totalProgramCounter;
   }
 
   /**
@@ -68,6 +97,10 @@ class LMC {
     return this.programIndices;
   }
 
+  addToProgramIndices(index) {
+    return (this.programIndices = [...this.programIndices, index]);
+  }
+
   /**
    * Retrieves the documentation associated with the LMC program.
    *
@@ -107,6 +140,8 @@ class LMC {
     if (program.length > 100) {
       throw new Error("Program size exceeds memory capacity.");
     }
+
+    this.totalProgramCounter = program.length;
 
     // Load program opcodes into memory
     program.forEach((instruction, index) => {
@@ -150,7 +185,7 @@ class LMC {
       throw new Error(`Program counter out of bounds: ${this.programCounter}`);
     }
 
-    const instruction = this.memory[this.programCounter];
+    const instruction = parseInt(this.memory[this.programCounter]);
     const opcode = Math.floor(instruction / 100);
     const address = instruction % 100;
 
@@ -158,7 +193,7 @@ class LMC {
 
     switch (opcode) {
       case 1: // ADD
-        this.accumulator += this.memory[address];
+        this.accumulator += parseInt(this.memory[address]);
 
         docObj = {
           mnemonic: "ADD",
@@ -167,13 +202,12 @@ class LMC {
           instruction: `ADD ${instruction}`,
           accumulator: this.accumulator,
           programCounter: this.programCounter + 1,
-          comment: `ADD value at address ${address} to the value in the accumulator`,
+          comment: `ADD value at address ${address} to the value in the accumulator.`,
         };
         this.documentations.push(docObj);
         break;
       case 2: // SUB
-        // this.accumulator -= this.memory[address];
-        this.accumulator -= this.memory[address];
+        this.accumulator -= parseInt(this.memory[address]);
 
         docObj = {
           mnemonic: "SUB",
@@ -182,12 +216,22 @@ class LMC {
           instruction: `SUB ${instruction}`,
           accumulator: this.accumulator,
           programCounter: this.programCounter + 1,
-          comment: `SUB value at address ${address} from the value in the accumulator`,
+          comment: `SUB value at address ${address} from the value in the accumulator.`,
         };
         this.documentations.push(docObj);
         break;
       case 3: // STORE (STA)
-        this.memory[address] = this.accumulator;
+        // if the value in the accumulator is not less then 0, do not pad it with zero
+        if (this.accumulator < 0) {
+          this.memory[address] = this.accumulator.toString();
+        } else {
+          this.memory[address] = this.accumulator.toString().padStart(3, "0");
+        }
+
+        // Add the address to the program indices if not already present
+        if (this.programIndices.indexOf(address) === -1) {
+          this.addToProgramIndices(address);
+        }
 
         docObj = {
           mnemonic: "STA",
@@ -196,12 +240,12 @@ class LMC {
           instruction: `STA ${instruction}`,
           accumulator: this.accumulator,
           programCounter: this.programCounter + 1,
-          comment: `STORE the value in the accumulator at ${address}`,
+          comment: `STORE the value in the accumulator at address ${address}.`,
         };
         this.documentations.push(docObj);
         break;
       case 5: // LOAD (LDA)
-        this.accumulator = this.memory[address];
+        this.accumulator = parseInt(this.memory[address]);
 
         docObj = {
           mnemonic: "LDA",
@@ -210,7 +254,7 @@ class LMC {
           instruction: `LDA ${instruction}`,
           accumulator: this.accumulator,
           programCounter: this.programCounter + 1,
-          comment: `LOAD the value at ${address} into the accumulator`,
+          comment: `LOAD the value at address ${address} into the accumulator.`,
         };
         this.documentations.push(docObj);
         break;
@@ -238,7 +282,7 @@ class LMC {
             instruction: `BRZ ${instruction}`,
             accumulator: this.accumulator,
             programCounter: this.programCounter,
-            comment: `BRANCH to ${address} if the accumulator value is zero`,
+            comment: `BRANCH to address ${address} if the accumulator value is zero.`,
           };
           this.documentations.push(docObj);
           return; // prevent incrementing the program counter
@@ -254,7 +298,7 @@ class LMC {
             instruction: `BRP ${instruction}`,
             accumulator: this.accumulator,
             programCounter: this.programCounter,
-            comment: `BRANCH to ${address} if the accumulator value is positive`,
+            comment: `BRANCH to address ${address} if the accumulator value is positive.`,
           };
           this.documentations.push(docObj);
           return;
@@ -265,31 +309,25 @@ class LMC {
           //INP
           if (this.inputs.length === 0) {
             if (this.inputCallback) {
-              // Signal that inputs is required
-              docObj = {
-                mnemonic: "INP",
-                opcode: instruction,
-                mailbox: address,
-                instruction: `INP ${address}`,
-                accumulator: this.accumulator,
-                programCounter: this.programCounter,
-                comment: `INPUT required from the user`,
-              };
-              this.documentations.push(docObj);
-              throw new Error("Input required"); // Custom error to signal input request
+              this.halted = true;
+              this.error = "Input required.";
             } else {
               throw new Error("Input buffer is empty.");
             }
           }
-          this.accumulator = this.inputs.shift();
+          const input = parseInt(this.inputs.shift(), 10);
+          if (isNaN(input)) {
+            throw new Error("Invalid input value: not a number.");
+          }
+          this.accumulator = input;
           docObj = {
             mnemonic: "INP",
-            opcode: instruction,
+            opcode: "901",
             mailbox: address,
-            instruction: `INP ${address}`,
+            instruction: `INP 901`,
             accumulator: this.accumulator,
             programCounter: this.programCounter + 1,
-            comment: `INPUT value from the input (${this.accumulator}) into the accumulator`,
+            comment: `INPUT the value from the inbox (${this.accumulator}) into the accumulator.`,
           };
           this.documentations.push(docObj);
         } else if (address === 2) {
@@ -297,12 +335,12 @@ class LMC {
           this.outputs.push(this.accumulator);
           docObj = {
             mnemonic: "OUT",
-            opcode: instruction,
+            opcode: "902",
             mailbox: address,
-            instruction: `OUT ${instruction}`,
+            instruction: `OUT 902`,
             accumulator: this.accumulator,
             programCounter: this.programCounter + 1,
-            comment: `OUTPUT value from the accumulator (${this.accumulator}) to the outputs`,
+            comment: `OUTPUT the value in the accumulator (${this.accumulator}) to the outbox.`,
           };
           this.documentations.push(docObj);
         } else {
@@ -313,9 +351,9 @@ class LMC {
         this.halted = true;
         docObj = {
           mnemonic: "HLT",
-          opcode: instruction,
+          opcode: "000",
           mailbox: address,
-          instruction: `HLT ${instruction}`,
+          instruction: `HLT 000`,
           accumulator: this.accumulator,
           programCounter: this.programCounter + 1,
           comment: `HALT program execution`,
@@ -331,36 +369,126 @@ class LMC {
   /**
    * Executes a single instruction from memory and logs the operation.
    */
-  stepProgram() {
-    this.step();
+  // In your LMC class (lmcSimulator.js)
+
+  async stepProgram() {
+    try {
+      this.step();
+      if (this.onStep) {
+        this.onStep();
+      }
+    } catch (error) {
+      if (this.error === "Input required.") {
+        // Await user input via the input callback
+        const input = await new Promise((resolve, reject) => {
+          if (this.inputCallback) {
+            this.inputCallback(
+              "Input required. Please enter a value:",
+              resolve
+            );
+          } else {
+            reject(new Error("Input callback not set."));
+          }
+        });
+
+        if (input !== null && input !== undefined) {
+          this.setInbox(parseInt(input, 10)); // Ensure input is a number
+
+          // Execute the step again with the input
+          try {
+            this.step();
+            if (this.onStep) {
+              this.onStep();
+            }
+          } catch (stepError) {
+            if (this.error === "Input required.") {
+              // Handle if another input is required
+              const nextInput = await new Promise((resolve, reject) => {
+                if (this.inputCallback) {
+                  this.inputCallback(
+                    "Input required. Please enter a value:",
+                    resolve
+                  );
+                } else {
+                  reject(new Error("Input callback not set."));
+                }
+              });
+
+              if (nextInput !== null && nextInput !== undefined) {
+                this.setInbox(parseInt(nextInput, 10));
+                // Optionally, execute step again or handle further inputs
+                this.step();
+                if (this.onStep) {
+                  this.onStep();
+                }
+              } else {
+                throw new Error("Input was canceled by the user.");
+              }
+            } else {
+              throw stepError;
+            }
+          }
+        } else {
+          throw new Error("Input was canceled by the user.");
+        }
+      } else {
+        throw error; // Re-throw unexpected errors
+      }
+    }
+
+    return Promise.resolve();
   }
 
   /**
-   * Runs the loaded program until it halts.
+   * Runs the loaded program until it halts, handling asynchronous input when required.
    */
-  run() {
+  async run() {
     if (this.isRunning) {
       this.error = "Program is already running.";
+      return Promise.reject(new Error(this.error));
     }
 
     this.isRunning = true;
 
-    return new Promise((resolve, reject) => {
-      const execute = () => {
-        try {
-          while (!this.halted && this.isRunning) {
-            this.executeStep();
-          }
-          resolve();
-        } catch (error) {
-          reject(error);
-        } finally {
-          this.isRunning = false;
-        }
-      };
+    try {
+      while (!this.halted && this.isRunning) {
+        await this.delay(this.delayTime);
 
-      setImmediate(execute);
-    });
+        try {
+          this.step();
+          if (this.onStep) {
+            this.onStep();
+          }
+        } catch (error) {
+          if (this.error === "Input required.") {
+            // Await user input via the input callback
+            const input = await new Promise((resolve, reject) => {
+              if (this.inputCallback) {
+                this.inputCallback(
+                  "Input required. Please enter a value:",
+                  resolve
+                );
+              } else {
+                reject(new Error("Input callback not set."));
+              }
+            });
+
+            if (input !== null && input !== undefined) {
+              this.setInbox(parseInt(input, 10)); // Ensure input is a number
+            } else {
+              throw new Error("Input was canceled by the user.");
+            }
+          } else {
+            throw error; // Re-throw unexpected errors
+          }
+        }
+      }
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error);
+    } finally {
+      this.isRunning = false;
+    }
   }
 
   /**
@@ -394,7 +522,12 @@ class LMC {
    * @param {number} value - The value to be added to the input queue.
    */
   setInbox(input) {
-    this.inputs = input;
+    this.inputs = [input];
+
+    if (this.error === "Input required.") {
+      this.halted = false; // Resume execution
+      this.error = null; // Clear the error message
+    }
   }
 
   /**
@@ -411,15 +544,8 @@ class LMC {
    *
    * @returns {Array} The array of log entries.
    */
-  getLogs() {
+  getDocumentation() {
     return this.documentations;
-  }
-
-  /**
-   * Clears the logs by resetting the logs array to an empty array.
-   */
-  clearLogs() {
-    this.documentations = [];
   }
 
   convertToProgram(instructions) {
