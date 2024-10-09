@@ -2,7 +2,7 @@ import React from "react";
 import useStore from "../store/useStore";
 
 const LogInfo = () => {
-  const logs = useStore((state) => state.logs);
+  const {logs} = useStore();
 
   return (
     <div

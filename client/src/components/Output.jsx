@@ -5,7 +5,7 @@ import useStore from "../store/useStore";
 
 const Output = () => {
   // Access the outputs from the Zustand store
-  const outputs = useStore((state) => state.outputs);
+  const {outputs} = useStore();
 
   return (
     <div
@@ -31,7 +31,7 @@ const Output = () => {
           return (
           <div
             key={index}
-            className="border border-orange-500 text-orange-500 text-xs font-mono p-1 rounded flex items-center justify-center w-10 h-10 shadow-sm"
+            className="border border-orange-500 text-orange-500 text-xs font-mono rounded flex items-center justify-center w-8 h-8 shadow-sm"
             data-testid={`output-value-${index}`}
             aria-label={`Output value ${index + 1}`}
             data-tip={`Output ${index + 1}: ${output}`}

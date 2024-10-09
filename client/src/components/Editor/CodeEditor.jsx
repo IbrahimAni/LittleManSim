@@ -2,28 +2,27 @@ import React, { useState } from "react";
 import useStore from "../../store/useStore";
 import Editor from "@monaco-editor/react";
 import { toast } from "react-toastify";
-import {parseAndTransformProgram} from "../../helper/parseProgramHelper";
+import { parseAndTransformProgram } from "../../helper/parseProgramHelper";
 
 const CodeEditor = () => {
   // Access the Zustand store
-  const { code, loadLmcProgram, run, step, stop, reset, setCode} = useStore();
+  const { code, loadLmcProgram, runProgram, step, stop, reset, setCode } =
+    useStore();
 
   // Handle changes in the editor
   const handleEditorChange = (value) => {
     setCode(value.toUpperCase());
   };
 
-  /**
-   * Handles loading the program into RAM.
-   */
+  // Load the program into the LMC simulator
   const handleLoadProgram = () => {
-    if(!code) {
+    if (!code) {
       toast.error("No instruction to load!");
-      return
+      return;
     }
-    
+
     const instructions = parseAndTransformProgram(code);
-    
+
     loadLmcProgram(instructions);
     toast.success("Instruction loaded successfully!");
   };
@@ -34,12 +33,12 @@ const CodeEditor = () => {
   };
 
   const handleRun = () => {
-    run();
+    runProgram();
     toast.info("Running program...");
   };
 
-  const handleStep = () => {
-    step();
+  const handleStep = async () => {
+    await step();
   };
 
   const handleStop = () => {
@@ -50,6 +49,51 @@ const CodeEditor = () => {
     reset();
     setCode("");
   };
+
+  const handleCodeFormat = () => {
+    const formattedCode = code
+      .split("\n")
+      .map((line) => {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) return ""; // Skip empty lines
+  
+        // Remove existing pipes to prevent duplication
+        const lineWithoutPipes = trimmedLine.replace(/\|/g, "").trim();
+  
+        // Split the line into parts based on whitespace
+        const parts = lineWithoutPipes.split(/\s+/);
+        let label = "", mnemonic = "", address = "";
+  
+        // Assign parts based on the number of components
+        if (parts.length === 3) {
+          [label, mnemonic, address] = parts;
+        } else if (parts.length === 2) {
+          [mnemonic, address] = parts;
+        } else if (parts.length === 1) {
+          [mnemonic] = parts;
+        } else {
+          // If there are more than 3 parts, consider only the first three
+          [label, mnemonic, address] = parts.slice(0, 3);
+        }
+  
+        // Define column widths
+        const labelWidth = 5;
+        const mnemonicWidth = 3;
+        const addressWidth = 3;
+  
+        // Pad each part to ensure alignment
+        const labelPadded = label.padEnd(labelWidth, " ");
+        const mnemonicPadded = mnemonic.padEnd(mnemonicWidth, " ");
+        const addressPadded = address.padEnd(addressWidth, " ");
+  
+        // Combine into a single formatted line with leading and trailing pipes
+        return `${labelPadded.toUpperCase()} | ${mnemonicPadded.toUpperCase()} | ${addressPadded.toUpperCase()}`;
+      })
+      .join("\n");
+  
+    setCode(formattedCode);
+  };
+  
 
   return (
     <div
@@ -174,6 +218,16 @@ const CodeEditor = () => {
           <i className="bx bx-trash mr-1" aria-hidden="true"></i>
           Clear
         </button>
+
+        {/* <button
+          className="flex items-center bg-violet-500 hover:bg-violet-600 text-white font-semibold py-1 px-3 rounded text-xs"
+          data-testid="format-button"
+          aria-label="Format Code"
+          onClick={handleCodeFormat}
+        >
+          <i className="bx bx-file mr-1"></i>
+          Format
+        </button> */}
       </div>
     </div>
   );

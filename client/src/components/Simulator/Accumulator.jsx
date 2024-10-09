@@ -2,8 +2,7 @@ import React from "react";
 import useStore from "../../store/useStore";
 
 const Accumulator = () => {
-  const accumulator = useStore((state) => state.accumulator);
-  const accumulatorEquation = useStore((state) => state.accumulatorEquation);
+  const { accumulator } = useStore();
 
   return (
     <div
@@ -27,15 +26,6 @@ const Accumulator = () => {
         >
           {accumulator}
         </div>
-        {accumulatorEquation && (
-          <div
-            className="text-xs sm:text-sm text-gray-700"
-            data-testid="accumulator-equation"
-            aria-label={`Accumulator equation ${accumulatorEquation}`}
-          >
-            {accumulatorEquation}
-          </div>
-        )}
       </div>
     </div>
   );
