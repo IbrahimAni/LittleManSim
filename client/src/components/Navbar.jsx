@@ -29,14 +29,13 @@ const Navbar = () => {
               </h1>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              {/* Current: "border-indigo-500 text-gray-900", Default: "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700" */}
               <a
                 href="#"
                 className="inline-flex items-center border-b-2 border-indigo-500 px-1 pt-1 text-sm font-medium text-gray-900"
               >
                 Dashboard
               </a>
-              <a
+              {/* <a
                 href="#"
                 className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
               >
@@ -47,7 +46,7 @@ const Navbar = () => {
                 className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
               >
                 Documentations
-              </a>
+              </a> */}
             </div>
           </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
@@ -116,7 +115,6 @@ const Navbar = () => {
       {/* On small devices */}
       <DisclosurePanel className="sm:hidden">
         <div className="space-y-1 pb-3 pt-2">
-          {/* Current: "bg-indigo-50 border-indigo-500 text-indigo-700", Default: "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700" */}
           <DisclosureButton
             as="a"
             href="#"
@@ -124,7 +122,7 @@ const Navbar = () => {
           >
             Dashboard
           </DisclosureButton>
-          <DisclosureButton
+          {/* <DisclosureButton
             as="a"
             href="#"
             className="block border-l-4 border-transparent py-2 pl-3 pr-4 text-base font-medium text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700"
@@ -137,7 +135,7 @@ const Navbar = () => {
             className="block border-l-4 border-transparent py-2 pl-3 pr-4 text-base font-medium text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700"
           >
             Documentation
-          </DisclosureButton>
+          </DisclosureButton> */}
         </div>
         {/* <div className="border-t border-gray-200 pb-3 pt-4">
           <div className="flex items-center px-4">
